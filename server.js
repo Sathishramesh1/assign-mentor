@@ -1,40 +1,50 @@
-const express = require("express");
+const express=require('express')
 const mongoose = require("mongoose");
 const bodyParser = require("body-parser");
+const cors=require('cors');
+const connectDB =require('./connection')
 
 require("dotenv").config();
 
 //Importing the models
 const Mentor = require("./models/Mentor");
 const Student = require("./models/Student");
-
+// const a=10
 const app = express();
+app.use(cors());
 
 const PORT = process.env.PORT;
-const DB_URL =process.env.DB_URL;
+
+
 app.use(bodyParser.json());
+connectDB();
+
+//connecting to MongoDB atlas
+//  mongoose
+//   .connect(DB_URL,{
+//     useNewUrlParser: true, useUnifiedTopology: true 
+//   })
+//   .then(() => console.log("Connected to MongoDB"))
+//   .catch((err) => console.log("Could not connect to MongoDB", err));
 
 
-//connecting to MongoDB
- mongoose
-  .connect(DB_URL,{})
-  .then(() => console.log("Connected to MongoDB"))
-  .catch((err) => console.log("Could not connect to MongoDB", err));
+
+
 
 
   
-// CREATE Mentor
+//1. Creating new Mentor
 app.post("/mentor", async (req, res) => {
   try {
     const mentor = new Mentor(req.body);
     await mentor.save();
-    res.send(mentor);
+    res.status(201).send(mentor);
   } catch (error) {
     res.status(400).send(error);
   }
 });
 
-// CREATE Student
+//2. Creating new Student
 app.post("/student", async (req, res) => {
   try {
     const student = new Student(req.body);
@@ -45,13 +55,14 @@ app.post("/student", async (req, res) => {
   }
 });
 
-// Assign
+// 3.Assign one mentor and multiple students
 app.post("/mentor/:mentorId/assign", async (req, res) => {
   try {
     const mentor = await Mentor.findById(req.params.mentorId);
+
     const students = await Student.find({ _id: { $in: req.body.students } });
     students.forEach((student) => {
-      student.cMentor = mentor._id;
+      student.currentMentor = mentor._id;
       student.save();
     });
     mentor.students = [
@@ -66,18 +77,20 @@ app.post("/mentor/:mentorId/assign", async (req, res) => {
 });
 
 
-//Assign and change
+//4.Assign and change the mentor
 app.put("/student/:studentId/assignMentor/:mentorId", async (req, res) => {
   try {
     const student = await Student.findById(req.params.studentId);
-    const nMentor = await Mentor.findById(req.params.mentorId);
+    const newMentor = await Mentor.findById(req.params.mentorId);
 
-    if (student.cMentor) {
-      student.pMentor.push(student.cMentor);
+    if (student.currentMentor) {
+      student.previousMentor.push(student.currentMentor);
     }
 
-    student.cMentor = nMentor._id;
+    student.currentMentor = newMentor._id;
+    newMentor.students.push(student._id);
     await student.save();
+    await newMentor.save();
     res.send(student);
   } catch (error) {
     res.status(400).send(error);
@@ -85,7 +98,7 @@ app.put("/student/:studentId/assignMentor/:mentorId", async (req, res) => {
 });
 
 
-// Show all students for a particular mentor
+// 5.Show all students for a particular mentor
 app.get("/mentor/:mentorId/students", async (req, res) => {
   try {
     const mentor = await Mentor.findById(req.params.mentorId).populate(
@@ -98,7 +111,23 @@ app.get("/mentor/:mentorId/students", async (req, res) => {
 });
 
 
+//6. API to show the previously assigned mentor for a
+//  particular student
+
+app.get("/student/:studentId/previousmentors",async (req,res)=>{
+    
+  try{
+    const student=await Student.findById(req.params.studentId).populate('previousMentor');
+     res.send(student);
+
+  }catch(error){
+    res.status(400).send(error);
+  }
+
+
+})
 
 app.listen(PORT,()=>{
-  console.log('server runnign on',PORT );
+  console.log("server running on",PORT)
+  
 })
