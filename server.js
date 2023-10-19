@@ -9,26 +9,19 @@ require("dotenv").config();
 //Importing the models
 const Mentor = require("./models/Mentor");
 const Student = require("./models/Student");
-// const a=10
 const app = express();
 app.use(cors());
-
 const PORT = process.env.PORT;
 
 
 app.use(bodyParser.json());
 connectDB();
 
-//connecting to MongoDB atlas
-//  mongoose
-//   .connect(DB_URL,{
-//     useNewUrlParser: true, useUnifiedTopology: true 
-//   })
-//   .then(() => console.log("Connected to MongoDB"))
-//   .catch((err) => console.log("Could not connect to MongoDB", err));
 
+app.get("/",(req,res)=>{
+  res.status(200).send('The assign-mentor server working ....')
 
-
+})
 
 
 
